@@ -3,14 +3,6 @@ const fetch = require('node-fetch'); //Import the express dependency
 const app = express();              //Instantiate an express app, the main work horse of this server
 const port = 5000;                  //Save the port number where your server will be listening
 
-let construirBody = (numeroDocumento, idOpcion) => JSON.stringify({
-  "peticionDTO": {
-    "idOpcion": idOpcion
-  },
-  "tipoDocumento": "C",
-  "numeroDocumento": '' + numeroDocumento
-});
-
 let construirRequest = (numeroDocumento, { usuario, clave }, idOpcion) => {
   return {
     'method': 'POST',
@@ -54,14 +46,26 @@ async function procesarEsperandoRespuesta(peticiones) {
   console.time("Total")
   for (const iterator of peticiones) {
     console.time("Proceso")
-    await procesarUnoAuno(iterator).finally(() => { console.timeEnd("Proceso") });
+    await procesarUnoAuno(iterator)
+      .then(res => {
+        console.log("_________________________________________");
+        console.log(res);
+      })
+      .catch( error => {
+        console.log("_________________________________________");
+        console.log(error);
+      })    
+      .finally(() => { console.timeEnd("Proceso") });
   }
+  console.log("_________________________________________");
   console.timeEnd("Total")
 }
 
 function procesarUnoAuno(peticion) {
-  return new Promise((resolve) => {
-    peticion.finally(() => resolve());
+  return new Promise((resolve, reject) => {
+    peticion
+      .then(res => resolve(res.json()))
+      .catch(error => reject(error.json()))
   });
 }
 
@@ -73,14 +77,22 @@ function procesarConcurrente(peticiones) {
 }
 
 //////////////CONFIGURACIONES
-const URL = "http://localhost:9021/serviciosqx/conductor/consulta";
+const URL = "http://localhost:9021/serviciosqx/vehiculo/consulta";
+
+let construirBody = (numeroDocumento, idOpcion) => JSON.stringify({
+  "peticionDTO": {
+    "idOpcion": idOpcion
+  },
+  "placa": '' + numeroDocumento
+});
 
 let construirUsuarios = () => [
-  new crearUsuario("medellin_ssd", "5ijuf6cghU50EzgQ1MYPCw==", [17,3,4], 10)
+  new crearUsuario("palmira_comparenderas", "5ijuf6cghU50EzgQ1MYPCw==", [1], 3),
+  new crearUsuario("mosquera_comparenderas", "5ijuf6cghU50EzgQ1MYPCw==", [1], 7)
 ];
 
 app.listen(port, () => {
   let peticiones = construirPeticiones();
-  procesarConcurrente(peticiones); //Varias peticiones en el mismo instante
-  //procesarEsperandoRespuesta(peticiones); //Varias peticones esperando cada respuesta antes de enviar la siguiente
+  //procesarConcurrente(peticiones); //Varias peticiones en el mismo instante
+  procesarEsperandoRespuesta(peticiones); //Varias peticones esperando cada respuesta antes de enviar la siguiente
 });
